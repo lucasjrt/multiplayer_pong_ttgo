@@ -28,13 +28,13 @@ Game::Game() {
 void Game::tick() {
   d_player->tick();
   int scoredPlayer = ball->tick();
-  int angle = -1;
+  int angle = 1024;
   if (ball->getDirection() == Side::UP) {
     angle = u_player->bounce(ball);
   } else if (ball->getDirection() == Side::DOWN) {
-    angle = d_player->bounce(ball)
+    angle = d_player->bounce(ball);
   }
-  if (angle >= 0) {
+  if (angle != 1024) {
     ball->bounce(angle);
   }
   if (scoredPlayer) {
@@ -194,7 +194,7 @@ void Player::centralize() {
   paddle->centralize();
 }
 
-bool Player::bounce(Ball* ball) {
+int Player::bounce(Ball* ball) {
   return paddle->bounce(ball);
 }
 

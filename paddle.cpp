@@ -36,17 +36,19 @@ void Paddle::setPos(int pos) {
 }
 
 int Paddle::bounce(Ball* ball) {
+  // NOTE: To avoid creating a type of structure to return if it bounces or not and the angle,
+  // 1024 was used to make things simple. The angle will never get to that value, so it's safe
+  // to use
+
   // TODO: Improve comparisons
-  if (!(ball->getX() + ball->getSize() / 2 > pos - width / 2 &&
-        ball->getX() - ball->getSize() / 2 < pos + width / 2)) {
-    return -1;
+  if (ball->getX() + ball->getSize() / 2 < pos - width / 2 ||
+      ball->getX() - ball->getSize() / 2 > pos + width / 2) {
+    return 1024;
   }
 
-  if ((player->getSide() == Side::DOWN && ball->getY() + ball->getSize() / 2 < WINDOW_HEIGHT - height) ||
-      (player->getSide() == Side::UP   && ball->getY() - ball->getSize() / 2 > height)) {
-    return -1;
-  }
-  return ball->getX() - pos;
+  if (player->getSide() == Side::DOWN && ball->getY() + ball->getSize() / 2 < WINDOW_HEIGHT - height) return 1024;
+  if (player->getSide() == Side::UP   && ball->getY() - ball->getSize() / 2 > height) return 1024;
+  return map((ball->getX() - pos), -width / 2, width / 2, -ball->getMaxXSpeed(), ball->getMaxXSpeed());
 }
 
 int Paddle::getPos() {

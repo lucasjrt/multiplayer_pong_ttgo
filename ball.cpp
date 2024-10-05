@@ -4,7 +4,8 @@
 
 Ball::Ball(int size):
     size(size), 
-    xSpeed(0) {
+    xSpeed(0),
+    maxXSpeed(5) {
   int side = random(0, 2);
   if (side) ySpeed = 2;
   else ySpeed = -2;
@@ -37,6 +38,10 @@ int Ball::getSize() {
   return size;
 }
 
+int Ball::getMaxXSpeed() {
+  return maxXSpeed;
+}
+
 Side Ball::getDirection() {
   if (ySpeed > 0) return Side::DOWN;
   return Side::UP;
@@ -51,7 +56,8 @@ bool Ball::isInCenter(int threshold) {
   return y + size >= WINDOW_HEIGHT / 2 - threshold && y - size < WINDOW_HEIGHT / 2 + threshold;
 }
 
-void Ball::bounce() {
+void Ball::bounce(int angle) {
+  xSpeed = constrain(angle, -maxXSpeed, maxXSpeed)
   ySpeed = -ySpeed;
 }
 

@@ -36,7 +36,7 @@ public:
   static void handleMoveRightStart(void* context);
   static void handleMoveStopLeft(void* context);
   static void handleMoveStopRight(void* context);
-  bool bounce(Ball* ball);
+  int bounce(Ball* ball);
   void startMoving(int direction);
   void stopMoving();
   void centralize();
