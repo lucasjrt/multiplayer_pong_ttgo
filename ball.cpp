@@ -57,7 +57,7 @@ bool Ball::isInCenter(int threshold) {
 }
 
 void Ball::bounce(int angle) {
-  xSpeed = constrain(angle, -maxXSpeed, maxXSpeed)
+  xSpeed = constrain(angle, -maxXSpeed, maxXSpeed);
   ySpeed = -ySpeed;
 }
 

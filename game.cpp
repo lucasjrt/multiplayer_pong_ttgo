@@ -9,6 +9,7 @@ TFT_eSPI Game::tft = TFT_eSPI();
 Game::Game() {
   field = new Field();
   ball = new Ball(8);
+  menu = new Menu(this);
   u_player = new Player(Side::UP);
   d_player = new Player(Side::DOWN);
   Paddle* u_paddle = new Paddle(WINDOW_WIDTH / 2);
@@ -26,6 +27,9 @@ Game::Game() {
 }
 
 void Game::tick() {
+  this->lButton->tick();
+  this->rButton->tick();
+  if (paused) return;
   d_player->tick();
   int scoredPlayer = ball->tick();
   int angle = 1024;
@@ -44,6 +48,7 @@ void Game::tick() {
 }
 
 void Game::render() {
+  if (paused) return;
   u_player->render();
   d_player->render();
   if (ball->isInCenter(20)) {
@@ -51,6 +56,10 @@ void Game::render() {
     renderScore();
   }
   ball->render();
+}
+
+Menu* Game::getMenu() {
+  return menu;
 }
 
 void Game::initialRender() {
@@ -62,7 +71,36 @@ void Game::initialRender() {
 }
 
 void Game::setControls(OneButton* lButton, OneButton* rButton) {
+  this->lButton = lButton;
+  this->rButton = rButton;
+
+  lButton->attachDuringLongPress(Game::handleOpenMenu, this);
+  rButton->attachDuringLongPress(Game::handleOpenMenu, this);
+  
   d_player->setControls(lButton, rButton);
+  menu->setControls(lButton, rButton);
+}
+
+void Game::handleOpenMenu(void *context) {
+  Game* game = static_cast<Game*>(context);
+  OneButton* lButton = game->getLButton();
+  OneButton* rButton = game->getRButton();
+  Serial.printf("LPressedMs: %ld, RPressedMs: %ld\n", lButton->getPressedMs(), rButton->getPressedMs());
+  if (lButton->getPressedMs() >= 2000 && rButton->getPressedMs() >= 2000 &&
+      abs((int) lButton->getPressedMs() - (int) rButton->getPressedMs()) < 100) {
+    Serial.println("Open menu");
+    lButton->reset();
+    rButton->reset();
+    game->getMenu()->open();
+  }
+}
+
+OneButton* Game::getLButton() {
+  return lButton;
+}
+
+OneButton* Game::getRButton() {
+  return rButton;
 }
 
 void Game::renderScore() {
@@ -97,6 +135,18 @@ void Game::score(int player) {
   delay(100);
 }
 
+void Game::togglePause() {
+  paused = !paused;
+}
+
+void Game::setPaused(bool paused) {
+  this->paused = paused;
+}
+
+bool Game::isPaused() {
+  return paused;
+}
+
 Player::Player(Side side):
     side(side),
     score(0),
@@ -105,8 +155,6 @@ Player::Player(Side side):
     moving(0) {}
 
 void Player::tick() {
-  this->lButton->tick();
-  this->rButton->tick();
   if (this->moving) {
     Paddle* p = this->getPaddle();
     p->setPos(p->getPos() + moving);
@@ -162,21 +210,25 @@ int Player::getSpeed() {
 }
 
 void Player::handleMoveLeftStart(void* context) {
+  Serial.println("Handle move left");
   Player* player = static_cast<Player*>(context);
   player->startMoving(-1);
 }
 
 void Player::handleMoveRightStart(void* context) {
+  Serial.println("Handle move right");
   Player* player = static_cast<Player*>(context);
   player->startMoving(1);
 }
 
 void Player::handleMoveStopLeft(void* context) {
+  Serial.println("Handle stop left");
   Player* player = static_cast<Player*>(context);
   if (player->getMovingDirection() < 0) player->stopMoving();
 }
 
 void Player::handleMoveStopRight(void* context) {
+  Serial.println("Handle stop right");
   Player* player = static_cast<Player*>(context);
   if (player->getMovingDirection() > 0) player->stopMoving();
 }

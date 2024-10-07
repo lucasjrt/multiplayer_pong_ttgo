@@ -5,6 +5,7 @@
 #include <OneButton.h>
 #include "ball.h"
 #include "macros.h"
+#include "menu.h"
 
 class Ball;
 class Paddle;
@@ -52,17 +53,28 @@ class Game {
 public:
   static TFT_eSPI tft;
   Game();
+  Menu* getMenu();
   void tick();
   void render();
   void initialRender();
   void setControls(OneButton* lButton, OneButton* rButton);
+  static void handleOpenMenu(void *context);
+  OneButton* getLButton();
+  OneButton* getRButton();
   void renderScore();
   void setDScore(int score);
   void setUScore(int score);
   void score(int player);
+  void togglePause();
+  void setPaused(bool paused);
+  bool isPaused();
 private:
+  bool paused;
+  Menu* menu;
   Ball* ball;
   Field* field;
+  OneButton* lButton;
+  OneButton* rButton;
   Player* u_player;
   Player* d_player;
 };
