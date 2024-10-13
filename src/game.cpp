@@ -1,4 +1,3 @@
-#include <functional>
 #include "ball.h"
 #include "game.h"
 #include "macros.h"
@@ -6,7 +5,13 @@
 
 TFT_eSPI Game::tft = TFT_eSPI(); 
 
-Game::Game() {
+Game::Game():
+    field(nullptr),
+    ball(nullptr),
+    menu(nullptr),
+    u_player(nullptr),
+    d_player(nullptr),
+    paused(false) {
   field = new Field();
   ball = new Ball(8);
   menu = new Menu(this);
@@ -74,11 +79,11 @@ void Game::setControls(OneButton* lButton, OneButton* rButton) {
   this->lButton = lButton;
   this->rButton = rButton;
 
-  lButton->attachDuringLongPress(Game::handleOpenMenu, this);
-  rButton->attachDuringLongPress(Game::handleOpenMenu, this);
+  this->lButton->attachDuringLongPress(Game::handleOpenMenu, this);
+  this->rButton->attachDuringLongPress(Game::handleOpenMenu, this);
 
-  d_player->setControls(lButton, rButton);
-  menu->setControls(lButton, rButton);
+  d_player->setControls(this->lButton, this->rButton);
+  menu->setControls(this->lButton, this->rButton);
 }
 
 void Game::handleOpenMenu(void *context) {
@@ -158,7 +163,9 @@ Player::Player(Side side):
     score(0),
     paddle(nullptr),
     speed(3),
-    moving(0) {}
+    moving(0),
+    lButton(nullptr),
+    rButton(nullptr) {}
 
 void Player::tick() {
   if (this->moving) {
@@ -196,22 +203,22 @@ void Player::setScore(int score) {
 }
 
 void Player::setControls(OneButton* lButton, OneButton* rButton) {
-  lButton = lButton;
-  rButton = rButton;
+  this->lButton = lButton;
+  this->rButton = rButton;
 
-  lButton->setLongPressIntervalMs(0);
-  rButton->setLongPressIntervalMs(0);
+  this->lButton->setLongPressIntervalMs(0);
+  this->rButton->setLongPressIntervalMs(0);
   
-  lButton->setClickMs(0);
-  rButton->setClickMs(0);
+  this->lButton->setClickMs(0);
+  this->rButton->setClickMs(0);
 
-  lButton->attachPress(Player::handleMoveLeftStart, this);
-  lButton->attachClick(Player::handleMoveStopLeft, this);
-  lButton->attachLongPressStop(Player::handleMoveStopLeft, this);
+  this->lButton->attachPress(Player::handleMoveLeftStart, this);
+  this->lButton->attachClick(Player::handleMoveLeftStop, this);
+  this->lButton->attachLongPressStop(Player::handleMoveLeftStop, this);
   
-  rButton->attachPress(Player::handleMoveRightStart, this);
-  rButton->attachClick(Player::handleMoveStopRight, this);
-  rButton->attachLongPressStop(Player::handleMoveStopRight, this);
+  this->rButton->attachPress(Player::handleMoveRightStart, this);
+  this->rButton->attachClick(Player::handleMoveRightStop, this);
+  this->rButton->attachLongPressStop(Player::handleMoveRightStop, this);
 }
 
 int Player::getSpeed() {
@@ -230,13 +237,13 @@ void Player::handleMoveRightStart(void* context) {
   player->startMoving(1);
 }
 
-void Player::handleMoveStopLeft(void* context) {
+void Player::handleMoveLeftStop(void* context) {
   Serial.println("Handle stop left");
   Player* player = static_cast<Player*>(context);
   if (player->getMovingDirection() < 0) player->stopMoving();
 }
 
-void Player::handleMoveStopRight(void* context) {
+void Player::handleMoveRightStop(void* context) {
   Serial.println("Handle stop right");
   Player* player = static_cast<Player*>(context);
   if (player->getMovingDirection() > 0) player->stopMoving();

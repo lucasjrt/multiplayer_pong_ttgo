@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <TFT_eSPI.h> // Graphics and font library for ST7735 driver chip
+#include <TFT_eSPI.h>
 #include <SPI.h>
 #include <OneButton.h>
 #include "game.h"
@@ -26,7 +26,7 @@ void setup(void) {
   Game::tft.setRotation(0);
   Game::tft.fillScreen(BLACK);
   
-  lButton.setup(LBUTTON, INPUT_PULLDOWN, true);
+  lButton.setup(LBUTTON, INPUT_PULLUP, true);
   rButton.setup(RBUTTON, INPUT_PULLDOWN, true);
 
   game = new Game();

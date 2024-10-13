@@ -35,8 +35,8 @@ public:
   void setControls(OneButton* lButton, OneButton* rButton);
   static void handleMoveLeftStart(void* context);
   static void handleMoveRightStart(void* context);
-  static void handleMoveStopLeft(void* context);
-  static void handleMoveStopRight(void* context);
+  static void handleMoveLeftStop(void* context);
+  static void handleMoveRightStop(void* context);
   int bounce(Ball* ball);
   void startMoving(int direction);
   void stopMoving();
