@@ -62,3 +62,7 @@ int Paddle::getHeight() {
 int Paddle::getWidth() {
   return this->width;
 }
+
+void Paddle::reset() {
+  pos = WINDOW_WIDTH / 2;
+}

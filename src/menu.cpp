@@ -7,10 +7,11 @@ Menu::Menu(Game* game):
     game(game),
     selectedOption(0) {
   graphics = new Graphics();
-  options = {"Resume", "New Game", "Multiplayer"};
+  options = {"Resume", "New Game", "Multiplayer", "Help"};
   handlers.push_back(&Menu::resumeOption);
   handlers.push_back(&Menu::newGameOption);
   handlers.push_back(&Menu::multiplayerOption);
+  handlers.push_back(&Menu::helpOption);
 }
 
 void Menu::open() {
@@ -44,6 +45,10 @@ bool Menu::getIsOpen() {
   return isOpen;
 }
 
+Game* Menu::getGame() {
+  return game;
+}
+
 void Menu::previous() {
   previousSelected = selectedOption;
   selectedOption = (selectedOption + options.size() - 1) % options.size();
@@ -73,23 +78,32 @@ void Menu::setControls(OneButton* lButton, OneButton* rButton) {
 }
 
 void Menu::acquireControls() {
+  clearControls();
   lButton->setLongPressIntervalMs(400);
   lButton->attachClick(Menu::handlePrevious, this);
   lButton->attachLongPressStart(Menu::handleQuit, this);
-  lButton->attachPress(noop, NULL);
-  lButton->attachLongPressStop(noop, NULL);
-  lButton->attachDuringLongPress(noop, NULL);
-
 
   rButton->setLongPressIntervalMs(400);
   rButton->attachClick(Menu::handleNext, this);
   rButton->attachLongPressStart(Menu::handleSelect, this);
+}
+
+void Menu::clearControls() {
+  lButton->attachClick(noop, NULL);
+  lButton->attachLongPressStart(noop, NULL);
+  lButton->attachPress(noop, NULL);
+  lButton->attachLongPressStop(noop, NULL);
+  lButton->attachDuringLongPress(noop, NULL);
+
+  rButton->attachClick(noop, NULL);
+  rButton->attachLongPressStart(noop, NULL);
   rButton->attachPress(noop, NULL);
   rButton->attachLongPressStop(noop, NULL);
   rButton->attachDuringLongPress(noop, NULL);
 }
 
 void Menu::releaseControls() {
+  clearControls();
   game->setControls(lButton, rButton);
 }
 
@@ -120,10 +134,17 @@ void Menu::resumeOption(void *context) {
 }
 
 void Menu::newGameOption(void *context) {
-
+  Menu* menu = static_cast<Menu*>(context);
+  Game* game = menu->getGame();
+  game->reset();
+  menu->close();
 }
 
 void Menu::multiplayerOption(void *context) {
+
+}
+
+void Menu::helpOption(void *context) {
 
 }
 

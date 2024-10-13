@@ -76,7 +76,7 @@ void Game::setControls(OneButton* lButton, OneButton* rButton) {
 
   lButton->attachDuringLongPress(Game::handleOpenMenu, this);
   rButton->attachDuringLongPress(Game::handleOpenMenu, this);
-  
+
   d_player->setControls(lButton, rButton);
   menu->setControls(lButton, rButton);
 }
@@ -85,7 +85,6 @@ void Game::handleOpenMenu(void *context) {
   Game* game = static_cast<Game*>(context);
   OneButton* lButton = game->getLButton();
   OneButton* rButton = game->getRButton();
-  Serial.printf("LPressedMs: %ld, RPressedMs: %ld\n", lButton->getPressedMs(), rButton->getPressedMs());
   if (lButton->getPressedMs() >= 2000 && rButton->getPressedMs() >= 2000 &&
       abs((int) lButton->getPressedMs() - (int) rButton->getPressedMs()) < 100) {
     Serial.println("Open menu");
@@ -128,7 +127,7 @@ void Game::score(int player) {
     setDScore(d_player->getScore() + 1);
   }
 
-  ball->reset();
+  ball->recenter();
   u_player->centralize();
   d_player->centralize();
   initialRender();
@@ -145,6 +144,13 @@ void Game::setPaused(bool paused) {
 
 bool Game::isPaused() {
   return paused;
+}
+
+void Game::reset() {
+  d_player->reset();
+  u_player->reset();
+  ball->recenter();
+  
 }
 
 Player::Player(Side side):
@@ -190,19 +196,22 @@ void Player::setScore(int score) {
 }
 
 void Player::setControls(OneButton* lButton, OneButton* rButton) {
-  this->lButton = lButton;
-  this->rButton = rButton;
+  lButton = lButton;
+  rButton = rButton;
 
-  this->lButton->setLongPressIntervalMs(1);
-  this->rButton->setLongPressIntervalMs(1);
-
-  this->lButton->attachPress(Player::handleMoveLeftStart, this);
-  this->lButton->attachClick(Player::handleMoveStopLeft, this);
-  this->lButton->attachLongPressStop(Player::handleMoveStopLeft, this);
+  lButton->setLongPressIntervalMs(0);
+  rButton->setLongPressIntervalMs(0);
   
-  this->rButton->attachPress(Player::handleMoveRightStart, this);
-  this->rButton->attachClick(Player::handleMoveStopRight, this);
-  this->rButton->attachLongPressStop(Player::handleMoveStopRight, this);
+  lButton->setClickMs(0);
+  rButton->setClickMs(0);
+
+  lButton->attachPress(Player::handleMoveLeftStart, this);
+  lButton->attachClick(Player::handleMoveStopLeft, this);
+  lButton->attachLongPressStop(Player::handleMoveStopLeft, this);
+  
+  rButton->attachPress(Player::handleMoveRightStart, this);
+  rButton->attachClick(Player::handleMoveStopRight, this);
+  rButton->attachLongPressStop(Player::handleMoveStopRight, this);
 }
 
 int Player::getSpeed() {
@@ -248,6 +257,12 @@ void Player::centralize() {
 
 int Player::bounce(Ball* ball) {
   return paddle->bounce(ball);
+}
+
+void Player::reset() {
+  stopMoving();
+  paddle->reset();
+  score = 0;
 }
 
 void Field::render() {

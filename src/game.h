@@ -41,6 +41,7 @@ public:
   void startMoving(int direction);
   void stopMoving();
   void centralize();
+  void reset();
 private:
   const Side side;
   int score, speed, moving;
@@ -68,6 +69,7 @@ public:
   void togglePause();
   void setPaused(bool paused);
   bool isPaused();
+  void reset();
 private:
   bool paused;
   Menu* menu;

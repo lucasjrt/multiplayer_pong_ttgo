@@ -32,6 +32,7 @@ public:
   void select();
   int getSelected();
   bool getIsOpen();
+  Game* getGame();
   void render();
   void setControls(OneButton* lButton, OneButton* rButton);
   static void handlePrevious(void *context);
@@ -41,6 +42,8 @@ public:
   static void resumeOption(void *context);
   static void newGameOption(void *context);
   static void multiplayerOption(void *context);
+  static void helpOption(void *context);
+  void clearControls();
 private:
   Game* game;
   bool isOpen;

@@ -61,7 +61,7 @@ void Ball::bounce(int angle) {
   ySpeed = -ySpeed;
 }
 
-void Ball::reset() {
+void Ball::recenter() {
   Game::tft.fillCircle(x, y, size, BLACK);
   x = WINDOW_WIDTH / 2;
   y = WINDOW_HEIGHT / 2;
@@ -70,4 +70,9 @@ void Ball::reset() {
   int side = random(0, 2);
   if (side) ySpeed = 2;
   else ySpeed = -2;
+}
+
+void Ball::reset() {
+  recenter();
+  xSpeed = 0;
 }

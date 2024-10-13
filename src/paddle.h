@@ -22,6 +22,7 @@ public:
   int getPos();
   int getHeight();
   int getWidth();
+  void reset();
 private:
   int pos;
   int width;

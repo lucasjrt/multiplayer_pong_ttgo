@@ -20,6 +20,7 @@ public:
   void setPosition(int x, int y);
   bool isInCenter(int threshold);
   void bounce(int angle);
+  void recenter();
   void reset();
 private:
   int x, y;
