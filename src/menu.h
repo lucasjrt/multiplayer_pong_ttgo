@@ -48,6 +48,8 @@ public:
   void select();
   int getSelected();
   int getPreviousSelected();
+  void stackMenu();
+  void unstackMenu();
   Game* getGame();
   SubMenu* getCurrentMenu();
   void setCurrentMenu(std::string name);
@@ -57,7 +59,8 @@ public:
   static void handlePrevious(void *context);
   static void handleNext(void *context);
   static void handleSelect(void *context);
-  static void handleQuit(void *context);
+  static void handleBack(void *context);
+  void attachBack();
   // Main menu options
   static void resumeOption(void *context);
   static void newGameOption(void *context);
@@ -72,6 +75,7 @@ private:
   int selectedOption;
   std::unordered_map<std::string, SubMenu> menus;
   std::string currentMenu;
+  std::vector<std::string> menuStack;
 
   OneButton* lButton;
   OneButton* rButton;

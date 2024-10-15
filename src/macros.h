@@ -7,6 +7,7 @@
 #define WINDOW_WIDTH 135
 #define WINDOW_HEIGHT 240
 
+#define LINE_GAP 5
 #define MENU_MARGIN 10
 #define OPTION_HEIGHT 25
 

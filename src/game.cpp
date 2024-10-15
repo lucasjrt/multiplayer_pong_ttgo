@@ -101,8 +101,6 @@ void Game::handleOpenMenu(void *context) {
   if (lButton->getPressedMs() >= 2000 && rButton->getPressedMs() >= 2000 &&
       abs((int) lButton->getPressedMs() - (int) rButton->getPressedMs()) < 100) {
     Serial.println("Open menu");
-    lButton->reset();
-    rButton->reset();
     game->getMenu()->setCurrentMenu(MENU_MAIN);
     game->getMenu()->open();
   }

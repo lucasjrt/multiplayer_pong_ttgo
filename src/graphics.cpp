@@ -85,7 +85,7 @@ void Graphics::showMessage(const char *title, const char *message) {
             words.erase(words.begin());
         }
         Game::tft.drawString(line.c_str(), x, y);
-        y += fontHeight;
+        y += fontHeight + LINE_GAP;
     }
 }
 

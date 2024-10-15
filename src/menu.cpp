@@ -46,12 +46,12 @@ Menu::Menu(Game* game):
 
 void Menu::open() {
   game->setPaused(true);
-  graphics->showMenu(this);
   lButton->reset();
   rButton->reset();
   lButton->tick();
   rButton->tick();
-  delay(300);
+  delay(500);
+  graphics->showMenu(this);
   Serial.println("Acquiring controls");
   acquireControls();
 }
@@ -70,6 +70,18 @@ int Menu::getSelected() {
 
 int Menu::getPreviousSelected() {
   return previousSelected;
+}
+
+void Menu::stackMenu() {
+  menuStack.push_back(currentMenu);
+}
+
+void Menu::unstackMenu() {
+  if (menuStack.size() > 0) {
+    currentMenu = menuStack.back();
+    menuStack.pop_back();
+    acquireControls();
+  }
 }
 
 Game* Menu::getGame() {
@@ -132,7 +144,7 @@ void Menu::acquireControls() {
   clearControls();
   lButton->setLongPressIntervalMs(400);
   lButton->attachClick(Menu::handlePrevious, this);
-  lButton->attachLongPressStart(Menu::handleQuit, this);
+  lButton->attachLongPressStart(Menu::handleBack, this);
 
   rButton->setLongPressIntervalMs(400);
   rButton->attachClick(Menu::handleNext, this);
@@ -160,9 +172,18 @@ void Menu::handleSelect(void *context) {
   menu->select();
 }
 
-void Menu::handleQuit(void *context) {
+void Menu::handleBack(void *context) {
   Menu* menu = static_cast<Menu*>(context);
-  menu->close();
+  if (menu->menuStack.size() > 0) {
+    menu->unstackMenu();
+    menu->setCurrentMenu(menu->currentMenu);
+  } else {
+    menu->close();
+  }
+}
+
+void Menu::attachBack() {
+  lButton->attachLongPressStart(Menu::handleBack, this);
 }
 
 void Menu::resumeOption(void *context) {
@@ -179,6 +200,7 @@ void Menu::newGameOption(void *context) {
 
 void Menu::multiplayerOption(void *context) {
   Menu* menu = static_cast<Menu*>(context);
+  menu->stackMenu();
   menu->setCurrentMenu(MENU_MULTIPLAYER);
   menu->open();
 }
@@ -186,6 +208,9 @@ void Menu::multiplayerOption(void *context) {
 void Menu::hostOption(void *context) {
   Menu* menu = static_cast<Menu*>(context);
   Game* game = menu->getGame();
+  menu->stackMenu();
+  menu->releaseControls();
+  menu->attachBack();
   game->host();
 }
 
