@@ -1,6 +1,4 @@
-#ifndef BALL_H
-#define BALL_H
-
+#pragma once
 #include "game.h"
 
 enum class Side;
@@ -29,5 +27,3 @@ private:
   int maxXSpeed;
   int xSpeed, ySpeed;
 };
-
-#endif

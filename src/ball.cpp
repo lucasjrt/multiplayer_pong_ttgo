@@ -69,7 +69,7 @@ void Ball::recenter() {
   Game::tft.fillCircle(x, y, size, BLACK);
   x = WINDOW_WIDTH / 2;
   y = WINDOW_HEIGHT / 2;
-  xSpeed = random(-5, 5);
+  xSpeed = random(-5, 6);
 
   int side = random(0, 2);
   if (side) ySpeed = 2;

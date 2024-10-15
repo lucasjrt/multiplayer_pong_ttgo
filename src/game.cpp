@@ -1,3 +1,7 @@
+#include <WiFi.h>
+#include <esp_now.h>
+#include <esp_wifi.h>
+
 #include "ball.h"
 #include "game.h"
 #include "macros.h"
@@ -11,7 +15,11 @@ Game::Game():
     menu(nullptr),
     u_player(nullptr),
     d_player(nullptr),
-    paused(false) {
+    paused(false),
+    lButton(nullptr),
+    rButton(nullptr),
+    peerMac{0} {
+  graphics = new Graphics();
   field = new Field();
   ball = new Ball(8);
   menu = new Menu(this);
@@ -95,6 +103,7 @@ void Game::handleOpenMenu(void *context) {
     Serial.println("Open menu");
     lButton->reset();
     rButton->reset();
+    game->getMenu()->setCurrentMenu(MENU_MAIN);
     game->getMenu()->open();
   }
 }
@@ -105,6 +114,10 @@ OneButton* Game::getLButton() {
 
 OneButton* Game::getRButton() {
   return rButton;
+}
+
+Graphics* Game::getGraphics() {
+  return graphics;
 }
 
 void Game::renderScore() {
@@ -156,6 +169,21 @@ void Game::reset() {
   u_player->reset();
   ball->recenter();
   
+}
+
+void Game::host() {
+  WiFi.disconnect();
+  Serial.println("Hosting game");
+
+  // Get own mac address
+  String mac = WiFi.macAddress();
+  char message[100];
+  snprintf(message, 100, "Waiting for player to join. Your MAC address is:\n\n %s", mac.c_str());
+  graphics->showMessage("Host", message);
+}
+
+void Game::join() {
+  Serial.println("Joining game");
 }
 
 Player::Player(Side side):

@@ -1,5 +1,4 @@
-#ifndef GAME_H
-#define GAME_H
+#pragma once
 
 #include <TFT_eSPI.h>
 #include <OneButton.h>
@@ -8,6 +7,8 @@
 #include "menu.h"
 
 class Ball;
+class Graphics;
+class Menu;
 class Paddle;
 
 enum class Side {
@@ -62,6 +63,7 @@ public:
   static void handleOpenMenu(void *context);
   OneButton* getLButton();
   OneButton* getRButton();
+  Graphics* getGraphics();
   void renderScore();
   void setDScore(int score);
   void setUScore(int score);
@@ -70,15 +72,17 @@ public:
   void setPaused(bool paused);
   bool isPaused();
   void reset();
+  void host();
+  void join();
 private:
   bool paused;
   Menu* menu;
   Ball* ball;
   Field* field;
+  Graphics* graphics;
   OneButton* lButton;
   OneButton* rButton;
   Player* u_player;
   Player* d_player;
+  uint8_t peerMac[6];
 };
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef PADDLE_H
-#define PADDLE_H
+#pragma once
 
 #include "game.h"
 
@@ -29,5 +28,3 @@ private:
   int height;
   Player* player;
 };
-
-#endif

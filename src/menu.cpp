@@ -1,30 +1,57 @@
 #include "game.h"
 #include "macros.h"
+#include "menu.h"
 
 void noop(void *_) {}
+
+std::string MenuOption::getText() {
+  return text;
+}
+
+MenuHandler MenuOption::getHandler() {
+  return handler;
+}
+
+std::string SubMenu::getTitle() {
+  return title;
+}
+
+std::string SubMenu::getText() {
+  return text;
+}
+
+std::vector<MenuOption> SubMenu::getOptions() {
+  return options;
+}
 
 Menu::Menu(Game* game):
     game(game),
     selectedOption(0) {
-  graphics = new Graphics();
-  options = {"Resume", "New Game", "Multiplayer", "Help"};
-  handlers.push_back(&Menu::resumeOption);
-  handlers.push_back(&Menu::newGameOption);
-  handlers.push_back(&Menu::multiplayerOption);
-  handlers.push_back(&Menu::helpOption);
+  graphics = game->getGraphics();
+  std::vector<MenuOption> mainMenu = {
+    MenuOption("Resume", Menu::resumeOption),
+    MenuOption("New Game", Menu::newGameOption),
+    MenuOption("Multiplayer", Menu::multiplayerOption),
+    MenuOption("Help", Menu::helpOption)
+  };
+
+  std::vector<MenuOption> multiplayerMenu = {
+    MenuOption("Host", Menu::hostOption),
+    MenuOption("Join", Menu::joinOption)
+  };
+
+  menus.emplace(MENU_MAIN, SubMenu("Main Menu", "Select an option", mainMenu));
+  menus.emplace(MENU_MULTIPLAYER, SubMenu("Multiplayer", "Select an option", multiplayerMenu));
 }
 
 void Menu::open() {
   game->setPaused(true);
-  Game::tft.fillScreen(BLACK);
-  delay(1000);
-  for (int i = 0; i < options.size(); i++) {
-    if (i == selectedOption) {
-      graphics->drawSelectedBox(i, options[i].c_str());
-    } else {
-      graphics->drawClearBox(i, options[i].c_str());
-    }
-  }
+  graphics->showMenu(this);
+  lButton->reset();
+  rButton->reset();
+  lButton->tick();
+  rButton->tick();
+  delay(300);
   Serial.println("Acquiring controls");
   acquireControls();
 }
@@ -41,51 +68,50 @@ int Menu::getSelected() {
   return selectedOption;
 }
 
-bool Menu::getIsOpen() {
-  return isOpen;
+int Menu::getPreviousSelected() {
+  return previousSelected;
 }
 
 Game* Menu::getGame() {
   return game;
 }
 
+SubMenu* Menu::getCurrentMenu() {
+  return &menus.at(currentMenu);
+}
+
+void Menu::setCurrentMenu(std::string name) {
+  currentMenu = name;
+  selectedOption = 0;
+  previousSelected = 0;
+  graphics->showMenu(this);
+}
+
 void Menu::previous() {
+  SubMenu* subMenu = getCurrentMenu();
   previousSelected = selectedOption;
-  selectedOption = (selectedOption + options.size() - 1) % options.size();
+  selectedOption = (selectedOption + subMenu->getOptions().size() - 1) % subMenu->getOptions().size();
   Serial.printf("Selected option: %d\n", selectedOption);
-  render();
+  graphics->renderMenuOption(this);
 }
 
 void Menu::next() {
+  SubMenu* subMenu = getCurrentMenu();
   previousSelected = selectedOption;
-  selectedOption = (selectedOption + 1) % options.size();
+  selectedOption = (selectedOption + 1) % subMenu->getOptions().size();
   Serial.printf("Selected option: %d\n", selectedOption);
-  render();
+  graphics->renderMenuOption(this);
 }
 
 void Menu::select() {
-  handlers[selectedOption](this);
-}
-
-void Menu::render() {
-  graphics->drawClearBox(previousSelected, options[previousSelected].c_str());
-  graphics->drawSelectedBox(selectedOption, options[selectedOption].c_str());
+  SubMenu* subMenu = getCurrentMenu();
+  MenuOption option = subMenu->getOptions()[selectedOption];
+  option.getHandler()(this);
 }
 
 void Menu::setControls(OneButton* lButton, OneButton* rButton) {
   this->lButton = lButton;
   this->rButton = rButton;
-}
-
-void Menu::acquireControls() {
-  clearControls();
-  lButton->setLongPressIntervalMs(400);
-  lButton->attachClick(Menu::handlePrevious, this);
-  lButton->attachLongPressStart(Menu::handleQuit, this);
-
-  rButton->setLongPressIntervalMs(400);
-  rButton->attachClick(Menu::handleNext, this);
-  rButton->attachLongPressStart(Menu::handleSelect, this);
 }
 
 void Menu::clearControls() {
@@ -100,6 +126,17 @@ void Menu::clearControls() {
   rButton->attachPress(noop, NULL);
   rButton->attachLongPressStop(noop, NULL);
   rButton->attachDuringLongPress(noop, NULL);
+}
+
+void Menu::acquireControls() {
+  clearControls();
+  lButton->setLongPressIntervalMs(400);
+  lButton->attachClick(Menu::handlePrevious, this);
+  lButton->attachLongPressStart(Menu::handleQuit, this);
+
+  rButton->setLongPressIntervalMs(400);
+  rButton->attachClick(Menu::handleNext, this);
+  rButton->attachLongPressStart(Menu::handleSelect, this);
 }
 
 void Menu::releaseControls() {
@@ -141,22 +178,20 @@ void Menu::newGameOption(void *context) {
 }
 
 void Menu::multiplayerOption(void *context) {
+  Menu* menu = static_cast<Menu*>(context);
+  menu->setCurrentMenu(MENU_MULTIPLAYER);
+  menu->open();
+}
 
+void Menu::hostOption(void *context) {
+  Menu* menu = static_cast<Menu*>(context);
+  Game* game = menu->getGame();
+  game->host();
+}
+
+void Menu::joinOption(void *context) {
 }
 
 void Menu::helpOption(void *context) {
 
-}
-
-void Graphics::drawSelectedBox(int index, const char* text) {
-    Game::tft.fillRect(MENU_MARGIN, MENU_MARGIN + index * OPTION_HEIGHT, WINDOW_WIDTH - 2 * MENU_MARGIN, OPTION_HEIGHT, fgColor);
-    Game::tft.drawRect(MENU_MARGIN, MENU_MARGIN + index * OPTION_HEIGHT, WINDOW_WIDTH - 2 * MENU_MARGIN, OPTION_HEIGHT, selectedColor);
-    Game::tft.setTextColor(selectedColor, fgColor);
-    Game::tft.drawString(text, 2 * MENU_MARGIN, MENU_MARGIN + index * OPTION_HEIGHT + OPTION_HEIGHT / 2);
-}
-
-void Graphics::drawClearBox(int index, const char *text) {
-    Game::tft.fillRect(MENU_MARGIN, MENU_MARGIN + index * OPTION_HEIGHT, WINDOW_WIDTH - 2 * MENU_MARGIN, OPTION_HEIGHT, bgColor);
-    Game::tft.setTextColor(fgColor, bgColor);
-    Game::tft.drawString(text, 2 * MENU_MARGIN, MENU_MARGIN + index * OPTION_HEIGHT + OPTION_HEIGHT / 2);
 }

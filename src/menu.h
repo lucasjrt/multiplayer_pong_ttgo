@@ -1,24 +1,41 @@
-#ifndef MENU_H
-#define MENU_H
+#pragma once
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include "game.h"
+#include "graphics.h"
 #include "macros.h"
 
 class Game;
+
 typedef void (*MenuHandler)(void*);
 
-class Graphics {
+class MenuOption {
 public:
-  Graphics():
-    fgColor(WHITE),
-    bgColor(BLACK),
-    selectedColor(BLUE) {}
-  void drawSelectedBox(int index, const char* string);
-  void drawClearBox(int index, const char* string);
+  MenuOption(std::string text, MenuHandler handler):
+    text(text),
+    handler(handler) {}
+  std::string getText();
+  MenuHandler getHandler();
 private:
-  uint32_t fgColor, bgColor, selectedColor;
+  std::string text;
+  MenuHandler handler;
+};
+
+class SubMenu {
+public:
+  SubMenu(std::string title, std::string text, std::vector<MenuOption> options):
+    title(title),
+    text(text),
+    options(options) {}
+  std::string getTitle();
+  std::string getText();
+  std::vector<MenuOption> getOptions();
+private:
+  std::string title;
+  std::string text;
+  std::vector<MenuOption> options;
 };
 
 class Menu {
@@ -28,36 +45,38 @@ public:
   void close();
   void next();
   void previous();
-  void back();
   void select();
   int getSelected();
-  bool getIsOpen();
+  int getPreviousSelected();
   Game* getGame();
-  void render();
+  SubMenu* getCurrentMenu();
+  void setCurrentMenu(std::string name);
+  // Button handlers
   void setControls(OneButton* lButton, OneButton* rButton);
+  void clearControls();
   static void handlePrevious(void *context);
   static void handleNext(void *context);
   static void handleSelect(void *context);
   static void handleQuit(void *context);
+  // Main menu options
   static void resumeOption(void *context);
   static void newGameOption(void *context);
   static void multiplayerOption(void *context);
   static void helpOption(void *context);
-  void clearControls();
+  // Multiplayer options
+  static void hostOption(void *context);
+  static void joinOption(void *context);
 private:
   Game* game;
-  bool isOpen;
-  std::vector<std::string> options;
   int previousSelected;
   int selectedOption;
-  std::vector<MenuHandler> handlers;
+  std::unordered_map<std::string, SubMenu> menus;
+  std::string currentMenu;
+
   OneButton* lButton;
   OneButton* rButton;
   Graphics* graphics;
 
-
   void acquireControls();
   void releaseControls();
 };
-
-#endif

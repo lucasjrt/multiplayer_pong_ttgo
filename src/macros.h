@@ -1,5 +1,4 @@
-#ifndef MACROS_H
-#define MACROS_H
+#pragma once
 
 #define BLACK 0x0000
 #define WHITE 0xFFFF
@@ -11,4 +10,5 @@
 #define MENU_MARGIN 10
 #define OPTION_HEIGHT 25
 
-#endif
+#define MENU_MAIN "main"
+#define MENU_MULTIPLAYER "multiplayer"
