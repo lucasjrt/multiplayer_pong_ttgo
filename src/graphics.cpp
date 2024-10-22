@@ -58,8 +58,7 @@ void Graphics::showMessage(const char *title, const char *message) {
             words.push_back(word);
             words.push_back("\n");
             word = "";
-        } else
-        if (message[i] == ' ') {
+        } else if (message[i] == ' ') {
             words.push_back(word);
             word = "";
         } else {

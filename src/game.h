@@ -5,6 +5,8 @@
 #include "ball.h"
 #include "macros.h"
 #include "menu.h"
+#include "network.h"
+#include "paddle.h"
 
 class Ball;
 class Graphics;
@@ -54,6 +56,8 @@ private:
 class Game {
 public:
   static TFT_eSPI tft;
+  static Game* instance;
+
   Game();
   Menu* getMenu();
   void tick();
@@ -64,6 +68,7 @@ public:
   OneButton* getLButton();
   OneButton* getRButton();
   Graphics* getGraphics();
+  Network* getNetwork();
   void renderScore();
   void setDScore(int score);
   void setUScore(int score);
@@ -72,10 +77,18 @@ public:
   void setPaused(bool paused);
   bool isPaused();
   void reset();
+  // Multiplayer
   void host();
-  void join();
+  void refreshJoinable();
+  void initJoinable();
+  void join(uint8_t* mac);
+  void setPeer(const uint8_t* mac);
+  void initMultiplayer();
+  void cancelMultiplayer();
 private:
+
   bool paused;
+  Network* network;
   Menu* menu;
   Ball* ball;
   Field* field;

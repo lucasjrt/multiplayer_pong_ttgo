@@ -32,6 +32,7 @@ public:
   std::string getTitle();
   std::string getText();
   std::vector<MenuOption> getOptions();
+  void setOptions(std::vector<MenuOption> options);
 private:
   std::string title;
   std::string text;
@@ -52,6 +53,7 @@ public:
   void unstackMenu();
   Game* getGame();
   SubMenu* getCurrentMenu();
+  SubMenu* getMenu(std::string name);
   void setCurrentMenu(std::string name);
   // Button handlers
   void setControls(OneButton* lButton, OneButton* rButton);
@@ -69,6 +71,10 @@ public:
   // Multiplayer options
   static void hostOption(void *context);
   static void joinOption(void *context);
+  static void refreshJoinOption(void *context);
+  static void joinGameOption(void *context);
+  void updateJoinable(std::vector<uint8_t*> discovered);
+  static void handleMultiplayerCancel(void *context);
 private:
   Game* game;
   int previousSelected;

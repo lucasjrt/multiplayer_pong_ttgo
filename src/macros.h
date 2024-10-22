@@ -4,6 +4,7 @@
 #define WHITE 0xFFFF
 #define GREY  0x5AEB
 #define BLUE  0x2356D9
+#define RED   0xF800
 #define WINDOW_WIDTH 135
 #define WINDOW_HEIGHT 240
 
@@ -13,3 +14,4 @@
 
 #define MENU_MAIN "main"
 #define MENU_MULTIPLAYER "multiplayer"
+#define MENU_MULTIPLAYER_JOIN "join"

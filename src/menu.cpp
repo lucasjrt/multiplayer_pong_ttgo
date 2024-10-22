@@ -24,6 +24,10 @@ std::vector<MenuOption> SubMenu::getOptions() {
   return options;
 }
 
+void SubMenu::setOptions(std::vector<MenuOption> options) {
+  this->options = options;
+}
+
 Menu::Menu(Game* game):
     game(game),
     selectedOption(0) {
@@ -40,8 +44,12 @@ Menu::Menu(Game* game):
     MenuOption("Join", Menu::joinOption)
   };
 
+  std::vector<MenuOption> joinMenu = {
+    MenuOption("Refresh", Menu::refreshJoinOption)
+  };
   menus.emplace(MENU_MAIN, SubMenu("Main Menu", "Select an option", mainMenu));
   menus.emplace(MENU_MULTIPLAYER, SubMenu("Multiplayer", "Select an option", multiplayerMenu));
+  menus.emplace(MENU_MULTIPLAYER_JOIN, SubMenu("Join Game", "Select a game to join", joinMenu));
 }
 
 void Menu::open() {
@@ -92,6 +100,10 @@ SubMenu* Menu::getCurrentMenu() {
   return &menus.at(currentMenu);
 }
 
+SubMenu* Menu::getMenu(std::string name) {
+  return &menus.at(name);
+}
+
 void Menu::setCurrentMenu(std::string name) {
   currentMenu = name;
   selectedOption = 0;
@@ -138,6 +150,11 @@ void Menu::clearControls() {
   rButton->attachPress(noop, NULL);
   rButton->attachLongPressStop(noop, NULL);
   rButton->attachDuringLongPress(noop, NULL);
+
+  lButton->reset();
+  rButton->reset();
+  lButton->tick();
+  rButton->tick();
 }
 
 void Menu::acquireControls() {
@@ -209,12 +226,57 @@ void Menu::hostOption(void *context) {
   Menu* menu = static_cast<Menu*>(context);
   Game* game = menu->getGame();
   menu->stackMenu();
-  menu->releaseControls();
-  menu->attachBack();
+  menu->clearControls();
+  menu->lButton->attachLongPressStart(Menu::handleMultiplayerCancel, menu);
   game->host();
 }
 
 void Menu::joinOption(void *context) {
+  Menu* menu = static_cast<Menu*>(context);
+  Game* game = menu->getGame();
+  menu->stackMenu();
+  menu->setCurrentMenu(MENU_MULTIPLAYER_JOIN);
+  game->initJoinable();
+  menu->open();
+}
+
+void Menu::joinGameOption(void *context) {
+  Menu* menu = static_cast<Menu*>(context);
+  SubMenu* currentMenu = menu->getCurrentMenu();
+  MenuOption option = currentMenu->getOptions()[menu->getSelected()];
+
+  Game* game = menu->getGame();
+  Network* network = game->getNetwork();
+  String macText = option.getText().c_str();
+  uint8_t* mac = network->macFromString(macText);
+
+  game->join(mac);
+}
+
+void Menu::updateJoinable(std::vector<uint8_t*> discovered) {
+  SubMenu* joinableMenu = getMenu(MENU_MULTIPLAYER_JOIN);
+  std::vector<MenuOption> newOptions;
+  Network* network = game->getNetwork();
+  newOptions.push_back(MenuOption("Refresh", Menu::refreshJoinOption));
+  for (uint8_t* mac : discovered) {
+    String macText = network->stringFromMac(mac);
+    newOptions.push_back(MenuOption(macText.c_str(), Menu::joinGameOption));
+  }
+  joinableMenu->setOptions(newOptions);
+}
+
+void Menu::refreshJoinOption(void *context) {
+  Menu* menu = static_cast<Menu*>(context);
+  Game* game = menu->getGame();
+  game->refreshJoinable();
+}
+
+void Menu::handleMultiplayerCancel(void *context) {
+  Menu* menu = static_cast<Menu*>(context);
+  Game* game = menu->getGame();
+  game->cancelMultiplayer();
+  menu->unstackMenu();
+  menu->setCurrentMenu(MENU_MULTIPLAYER);
 }
 
 void Menu::helpOption(void *context) {

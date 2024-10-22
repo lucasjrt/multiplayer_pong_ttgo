@@ -1,7 +1,9 @@
 #pragma once
 
+#include "ball.h"
 #include "game.h"
 
+class Ball;
 class Player;
 
 class Paddle {

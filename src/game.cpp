@@ -5,9 +5,12 @@
 #include "ball.h"
 #include "game.h"
 #include "macros.h"
+#include "menu.h"
+#include "network.h"
 #include "paddle.h"
 
-TFT_eSPI Game::tft = TFT_eSPI(); 
+TFT_eSPI Game::tft = TFT_eSPI();
+Game* Game::instance = nullptr;
 
 Game::Game():
     field(nullptr),
@@ -19,6 +22,13 @@ Game::Game():
     lButton(nullptr),
     rButton(nullptr),
     peerMac{0} {
+  if (instance) {
+    // Crash if there is more than one instance
+    Game::tft.fillScreen(RED);
+    while (1) {}
+  }
+  instance = this;
+  network = new Network(this);
   graphics = new Graphics();
   field = new Field();
   ball = new Ball(8);
@@ -118,6 +128,10 @@ Graphics* Game::getGraphics() {
   return graphics;
 }
 
+Network* Game::getNetwork() {
+  return network;
+}
+
 void Game::renderScore() {
   int u_score_int = u_player->getScore();
   int d_score_int = d_player->getScore();
@@ -170,18 +184,51 @@ void Game::reset() {
 }
 
 void Game::host() {
-  WiFi.disconnect();
-  Serial.println("Hosting game");
-
-  // Get own mac address
-  String mac = WiFi.macAddress();
   char message[100];
-  snprintf(message, 100, "Waiting for player to join. Your MAC address is:\n\n %s", mac.c_str());
+  network->init();
+  network->enableDiscovery();
+  uint8_t* mac = network->getMac();
+  String macStr = network->stringFromMac(mac);
+  snprintf(message, 100, "Waiting for player to join. Your MAC address is:\n\n %s", macStr.c_str());
+  Serial.printf("Message: %s\n", message);
   graphics->showMessage("Host", message);
 }
 
-void Game::join() {
-  Serial.println("Joining game");
+void Game::refreshJoinable() {
+  network->discover();
+  network->resetDiscovered();
+  graphics->showMessage("Join Game", "Searching for games...");
+  delay(500);
+  std::vector<uint8_t*> discovered = network->getDiscovered();
+  menu->updateJoinable(discovered);
+  graphics->showMenu(menu);
+}
+
+void Game::initJoinable() {
+  network->init();
+  refreshJoinable();
+}
+
+void Game::join(uint8_t* mac) {
+  setPeer(mac);
+  initMultiplayer();
+}
+
+void Game::setPeer(const uint8_t* mac) {
+  for (int i = 0; i < 6; i++) {
+    peerMac[i] = mac[i];
+  }
+}
+
+void Game::initMultiplayer() {
+  // TODO: Implement
+  Serial.println("Initializing multiplayer");
+}
+
+void Game::cancelMultiplayer() {
+  Serial.println("Cancelling multiplayer");
+  esp_now_unregister_recv_cb();
+  esp_now_deinit();
 }
 
 Player::Player(Side side):
