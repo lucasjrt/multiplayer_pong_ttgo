@@ -1,7 +1,4 @@
-#include <TFT_eSPI.h>
 #include "paddle.h"
-#include "game.h"
-#include "macros.h"
 
 void Paddle::render(bool force) {
   int direction = player->getMovingDirection();

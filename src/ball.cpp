@@ -13,6 +13,8 @@ Ball::Ball(int size):
   int side = random(0, 2);
   if (side) ySpeed = 2;
   else ySpeed = -2;
+  // DEBUG: Stop the ball
+  ySpeed = 0;
 }
 
 int Ball::tick() {
@@ -40,6 +42,14 @@ int Ball::getY() {
 
 int Ball::getSize() {
   return size;
+}
+
+int Ball::getSpeedX() {
+  return xSpeed;
+}
+
+int Ball::getSpeedY() {
+  return ySpeed;
 }
 
 int Ball::getMaxXSpeed() {

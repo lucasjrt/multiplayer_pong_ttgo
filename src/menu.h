@@ -31,6 +31,7 @@ public:
     options(options) {}
   std::string getTitle();
   std::string getText();
+  void setText(std::string text);
   std::vector<MenuOption> getOptions();
   void setOptions(std::vector<MenuOption> options);
 private:
@@ -69,12 +70,20 @@ public:
   static void multiplayerOption(void *context);
   static void helpOption(void *context);
   // Multiplayer options
-  static void hostOption(void *context);
-  static void joinOption(void *context);
-  static void refreshJoinOption(void *context);
-  static void joinGameOption(void *context);
   void updateJoinable(std::vector<uint8_t*> discovered);
+  static void hostOption(void *context);
+  static void listJoinOption(void *context);
+  static void refreshJoinOption(void *context);
+  static void requestJoinOption(void *context);
+  static void acceptJoinOption(void *context);
+  static void declineJoinOption(void *context);
+  static void handleCancel(void *context);
   static void handleMultiplayerCancel(void *context);
+  static void handleJoinRequestSent();
+  static void handleJoinRequestReceived(uint8_t* mac);
+  static void handleJoinRequestAccepted();
+  static void handleJoinRequestDeclined();
+  static void handleHostStart();
 private:
   Game* game;
   int previousSelected;

@@ -11,6 +11,8 @@ public:
   int getX();
   int getY();
   int getSize();
+  int getSpeedX();
+  int getSpeedY();
   int getMaxXSpeed();
   Side getDirection();
   void setX(int x);

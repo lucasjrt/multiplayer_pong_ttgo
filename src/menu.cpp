@@ -20,6 +20,10 @@ std::string SubMenu::getText() {
   return text;
 }
 
+void SubMenu::setText(std::string text) {
+  this->text = text;
+}
+
 std::vector<MenuOption> SubMenu::getOptions() {
   return options;
 }
@@ -41,15 +45,22 @@ Menu::Menu(Game* game):
 
   std::vector<MenuOption> multiplayerMenu = {
     MenuOption("Host", Menu::hostOption),
-    MenuOption("Join", Menu::joinOption)
+    MenuOption("Join", Menu::listJoinOption)
   };
 
   std::vector<MenuOption> joinMenu = {
     MenuOption("Refresh", Menu::refreshJoinOption)
   };
+
+  std::vector<MenuOption> joinRequest = {
+    MenuOption("Accept", Menu::acceptJoinOption),
+    MenuOption("Decline", Menu::declineJoinOption)
+  };
+
   menus.emplace(MENU_MAIN, SubMenu("Main Menu", "Select an option", mainMenu));
   menus.emplace(MENU_MULTIPLAYER, SubMenu("Multiplayer", "Select an option", multiplayerMenu));
   menus.emplace(MENU_MULTIPLAYER_JOIN, SubMenu("Join Game", "Select a game to join", joinMenu));
+  menus.emplace(MENU_MULTIPLAYER_JOIN_REQUEST, SubMenu("Join Request", "An unknown player wants to join your game", joinRequest));
 }
 
 void Menu::open() {
@@ -219,19 +230,15 @@ void Menu::multiplayerOption(void *context) {
   Menu* menu = static_cast<Menu*>(context);
   menu->stackMenu();
   menu->setCurrentMenu(MENU_MULTIPLAYER);
-  menu->open();
 }
 
 void Menu::hostOption(void *context) {
   Menu* menu = static_cast<Menu*>(context);
   Game* game = menu->getGame();
-  menu->stackMenu();
-  menu->clearControls();
-  menu->lButton->attachLongPressStart(Menu::handleMultiplayerCancel, menu);
-  game->host();
+  menu->handleHostStart();
 }
 
-void Menu::joinOption(void *context) {
+void Menu::listJoinOption(void *context) {
   Menu* menu = static_cast<Menu*>(context);
   Game* game = menu->getGame();
   menu->stackMenu();
@@ -240,17 +247,64 @@ void Menu::joinOption(void *context) {
   menu->open();
 }
 
-void Menu::joinGameOption(void *context) {
-  Menu* menu = static_cast<Menu*>(context);
-  SubMenu* currentMenu = menu->getCurrentMenu();
-  MenuOption option = currentMenu->getOptions()[menu->getSelected()];
-
-  Game* game = menu->getGame();
+void Menu::handleJoinRequestSent() {
+  Game* game = Game::instance;
+  Menu* menu = game->getMenu();
   Network* network = game->getNetwork();
-  String macText = option.getText().c_str();
-  uint8_t* mac = network->macFromString(macText);
 
-  game->join(mac);
+  String ownMac = network->getMacString();
+  char message[100];
+  snprintf(message, 100, "Waiting for response. Your MAC is: %s", ownMac.c_str());
+  menu->stackMenu();
+  menu->clearControls();
+  game->getLButton()->attachLongPressStart(Menu::handleCancel, menu);
+  game->getGraphics()->showMessage("Join Request", message);
+}
+
+void Menu::handleJoinRequestReceived(uint8_t* mac) {
+  Game* game = Game::instance;
+  Menu* menu = game->getMenu();
+  Network* network = game->getNetwork();
+  SubMenu* joinRequestMenu = menu->getMenu(MENU_MULTIPLAYER_JOIN_REQUEST);
+
+  game->setPeer(mac);
+
+  char message[100];
+  String macStr = network->stringFromMac(mac);
+  snprintf(message, 100, "Player %s wants to join your game", macStr.c_str());
+  joinRequestMenu->setText(message);
+  menu->stackMenu();
+  menu->setCurrentMenu(MENU_MULTIPLAYER_JOIN_REQUEST);
+  menu->acquireControls();
+}
+
+void Menu::handleJoinRequestAccepted() {
+  Game* game = Game::instance;
+  game->initMultiplayer();
+}
+
+void Menu::handleJoinRequestDeclined() {
+  Game* game = Game::instance;
+  Menu* menu = game->getMenu();
+  menu->clearControls();
+  game->getLButton()->attachLongPressStart(Menu::handleMultiplayerCancel, menu);
+  game->getGraphics()->showMessage("Join Request", "Your request was declined");
+}
+
+void Menu::handleHostStart() {
+  Game* game = Game::instance;
+  Menu* menu = game->getMenu();
+  Network* network = game->getNetwork();
+
+  network->init();
+  network->enableDiscovery();
+  uint8_t* mac = network->getMac();
+  String macStr = network->stringFromMac(mac);
+  char message[100];
+  snprintf(message, 100, "Waiting for player to join. Your MAC address is:\n\n %s", macStr.c_str());
+  menu->clearControls();
+  game->getLButton()->attachLongPressStart(Menu::handleMultiplayerCancel, menu);
+  game->getGraphics()->showMessage("Host", message);
 }
 
 void Menu::updateJoinable(std::vector<uint8_t*> discovered) {
@@ -260,7 +314,7 @@ void Menu::updateJoinable(std::vector<uint8_t*> discovered) {
   newOptions.push_back(MenuOption("Refresh", Menu::refreshJoinOption));
   for (uint8_t* mac : discovered) {
     String macText = network->stringFromMac(mac);
-    newOptions.push_back(MenuOption(macText.c_str(), Menu::joinGameOption));
+    newOptions.push_back(MenuOption(macText.c_str(), Menu::requestJoinOption));
   }
   joinableMenu->setOptions(newOptions);
 }
@@ -271,12 +325,51 @@ void Menu::refreshJoinOption(void *context) {
   game->refreshJoinable();
 }
 
+void Menu::requestJoinOption(void *context) {
+  Menu* menu = static_cast<Menu*>(context);
+  Game* game = menu->getGame();
+  Network* network = game->getNetwork();
+
+  SubMenu* joinMenu = menu->getMenu(MENU_MULTIPLAYER_JOIN);
+  std::vector<MenuOption> options = joinMenu->getOptions();
+  String selectedMac = options[menu->getSelected()].getText().c_str();
+  uint8_t* mac = network->macFromString(selectedMac);
+  network->requestJoin(mac);
+  menu->handleJoinRequestSent();
+}
+
+void Menu::acceptJoinOption(void *context) {
+  Menu* menu = static_cast<Menu*>(context);
+  Game* game = menu->getGame();
+  Network* network = game->getNetwork();
+  network->acceptJoin();
+  game->initMultiplayer();
+}
+
+void Menu::declineJoinOption(void *context) {
+  Menu* menu = static_cast<Menu*>(context);
+  Game* game = menu->getGame();
+  Network* network = game->getNetwork();
+  network->declineJoin();
+  game->cancelMultiplayer();
+  menu->unstackMenu();
+  menu->setCurrentMenu(menu->currentMenu);
+}
+
+void Menu::handleCancel(void *context) {
+  Menu* menu = static_cast<Menu*>(context);
+  Game* game = menu->getGame();
+  Serial.println("Cancelling");
+  menu->unstackMenu();
+  menu->setCurrentMenu(menu->currentMenu);
+}
+
 void Menu::handleMultiplayerCancel(void *context) {
   Menu* menu = static_cast<Menu*>(context);
   Game* game = menu->getGame();
+  Serial.println("Cancelling multiplayer");
   game->cancelMultiplayer();
-  menu->unstackMenu();
-  menu->setCurrentMenu(MENU_MULTIPLAYER);
+  menu->handleCancel(context);
 }
 
 void Menu::helpOption(void *context) {

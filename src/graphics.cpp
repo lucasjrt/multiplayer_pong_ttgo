@@ -20,8 +20,8 @@ void Graphics::drawClearBox(int index, const char *text, int topMargin) {
 void Graphics::showMenu(Menu* menu) {
     SubMenu* subMenu = menu->getCurrentMenu();
     int fontHeight = Game::tft.fontHeight();
-    int titleHeight = MENU_MARGIN + fontHeight * 2;
-    int textHeight = titleHeight + fontHeight * 2 + MENU_MARGIN;
+    int titleHeight = MENU_MARGIN + fontHeight * getLineCount(subMenu->getTitle().c_str());
+    int textHeight = MENU_MARGIN + titleHeight + fontHeight * getLineCount(subMenu->getText().c_str());
     Game::tft.fillScreen(bgColor);
     drawTitle(subMenu->getTitle().c_str());
     drawMessage(subMenu->getText().c_str());
@@ -40,8 +40,8 @@ void Graphics::renderMenuOption(Menu* menu) {
     int previousSelected = menu->getPreviousSelected();
     SubMenu* subMenu = menu->getCurrentMenu();
     int fontHeight = Game::tft.fontHeight();
-    int titleHeight = MENU_MARGIN + fontHeight * 2;
-    int textHeight = titleHeight + fontHeight * 2 + MENU_MARGIN;
+    int titleHeight = MENU_MARGIN + fontHeight * getLineCount(subMenu->getTitle().c_str());
+    int textHeight = MENU_MARGIN + titleHeight + fontHeight * getLineCount(subMenu->getText().c_str());
     Game::tft.setTextColor(fgColor, bgColor);
     drawClearBox(previousSelected, subMenu->getOptions()[previousSelected].getText().c_str(), textHeight);
     drawSelectedBox(currentSelected, subMenu->getOptions()[currentSelected].getText().c_str(), textHeight);
@@ -49,29 +49,60 @@ void Graphics::renderMenuOption(Menu* menu) {
 
 void Graphics::showMessage(const char *title, const char *message) {
     Game::tft.fillScreen(bgColor);
+    int titleHeight = MENU_MARGIN + Game::tft.fontHeight() * getLineCount(title);
     drawTitle(title);
-    // Split words so we can wrap text and handle \n
+    drawMessage(message, titleHeight);
+}
+
+int Graphics::getLineCount(const char *message) {
+    return wrapText(message).size() + 1;
+}
+
+void Graphics::drawTitle(const char *title) {
+    uint16_t fontHeight = Game::tft.fontHeight();
+    int textWidth = Game::tft.textWidth(title);
+    int x = (WINDOW_WIDTH - textWidth) / 2;
+    Game::tft.setTextColor(selectedColor, bgColor);
+    Game::tft.drawString(title, x, MENU_MARGIN);
+}
+
+void Graphics::drawMessage(const char *message, int titleHeight) {
+    std::vector<std::string> wrappedText = wrapText(message);
+    uint16_t fontHeight = Game::tft.fontHeight();
+    if (titleHeight == 0) {
+        titleHeight = fontHeight * 2;
+    }
+    int y = MENU_MARGIN + titleHeight;
+    Game::tft.setTextColor(fgColor, bgColor);
+    for (int i = 0; i < wrappedText.size(); i++) {
+        Game::tft.drawString(wrappedText[i].c_str(), MENU_MARGIN, y);
+        y += fontHeight * 2;
+    }
+}
+
+std::vector<std::string> Graphics::wrapText(const char *text) {
+    std::vector<std::string> wrappedText;
     std::vector<std::string> words;
-    std::string word;
-    for (int i = 0; message[i] != '\0'; i++) {
-        if (message[i] == '\n') {
+    std::string word = "";
+
+    // FIXME: This is vulnerable to buffer overflow
+    for (int i = 0; text[i] != '\0'; i++) {
+        if (text[i] == ' ') {
+            words.push_back(word);
+            word = "";
+        } else if (text[i] == '\n') {
             words.push_back(word);
             words.push_back("\n");
             word = "";
-        } else if (message[i] == ' ') {
-            words.push_back(word);
-            word = "";
         } else {
-            word += message[i];
+            word += text[i];
         }
     }
-    words.push_back(word);
-    // Draw message
-    int fontHeight = Game::tft.fontHeight();
-    int titleHeight = MENU_MARGIN + fontHeight * 2;
-    int textHeight = titleHeight + fontHeight * 2 + MENU_MARGIN;
-    int x = MENU_MARGIN;
-    int y = textHeight;
+
+    if (word != "") {
+        words.push_back(word);
+    }
+
     while (words.size() > 0) {
         std::string line = words[0];
         words.erase(words.begin());
@@ -83,24 +114,8 @@ void Graphics::showMessage(const char *title, const char *message) {
             line += " " + words[0];
             words.erase(words.begin());
         }
-        Game::tft.drawString(line.c_str(), x, y);
-        y += fontHeight + LINE_GAP;
+        wrappedText.push_back(line);
     }
-}
 
-void Graphics::drawTitle(const char *title) {
-    uint16_t fontHeight = Game::tft.fontHeight();
-    int textWidth = Game::tft.textWidth(title);
-    int x = (WINDOW_WIDTH - textWidth) / 2;
-    Game::tft.setTextColor(selectedColor, bgColor);
-    Game::tft.drawString(title, x, MENU_MARGIN);
-}
-
-void Graphics::drawMessage(const char *message) {
-    uint16_t fontHeight = Game::tft.fontHeight();
-    int textWidth = Game::tft.textWidth(message);
-    int x = (WINDOW_WIDTH - textWidth) / 2;
-    int titleHeight = MENU_MARGIN + fontHeight * 2 + MENU_MARGIN;
-    Game::tft.setTextColor(fgColor, bgColor);
-    Game::tft.drawString(message, x, titleHeight);
+    return wrappedText;
 }

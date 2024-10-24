@@ -12,6 +12,7 @@ class Ball;
 class Graphics;
 class Menu;
 class Paddle;
+class Player;
 
 enum class Side {
   UP,
@@ -23,35 +24,13 @@ public:
   void render();
 };
 
-class Player {
-public:
-  Player(Side side);
-  void tick();
-  void render(bool force = false);
-  Side getSide();
-  Paddle* getPaddle();
-  int getMovingDirection();
-  int getScore();
-  int getSpeed();
-  void setScore(int score);
-  void setPaddle(Paddle* paddle);
-  void setControls(OneButton* lButton, OneButton* rButton);
-  static void handleMoveLeftStart(void* context);
-  static void handleMoveRightStart(void* context);
-  static void handleMoveLeftStop(void* context);
-  static void handleMoveRightStop(void* context);
-  int bounce(Ball* ball);
-  void startMoving(int direction);
-  void stopMoving();
-  void centralize();
-  void reset();
-private:
-  const Side side;
-  int score, speed, moving;
-  OneButton* lButton;
-  OneButton* rButton;
-  Paddle* paddle;
-};
+typedef struct RemoteTick {
+  int playerPos;
+  int ballX;
+  int ballY;
+  int ballSpeedX;
+  int ballSpeedY;
+} RemoteTick;
 
 class Game {
 public:
@@ -82,12 +61,17 @@ public:
   void refreshJoinable();
   void initJoinable();
   void join(uint8_t* mac);
-  void setPeer(const uint8_t* mac);
+  void setPeer(uint8_t* mac);
+  uint8_t* getPeer();
   void initMultiplayer();
   void cancelMultiplayer();
+  RemoteTick* getRemoteTick();
+  void syncGame(RemoteTick* remoteTick);
+  void requestSent();
 private:
 
   bool paused;
+  bool isMultiplayer;
   Network* network;
   Menu* menu;
   Ball* ball;
@@ -95,7 +79,7 @@ private:
   Graphics* graphics;
   OneButton* lButton;
   OneButton* rButton;
-  Player* u_player;
-  Player* d_player;
+  Player* uPlayer;
+  Player* dPlayer;
   uint8_t peerMac[6];
 };

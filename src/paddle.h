@@ -1,7 +1,12 @@
 #pragma once
 
+#include <TFT_eSPI.h>
+
 #include "ball.h"
 #include "game.h"
+#include "macros.h"
+#include "paddle.h"
+#include "player.h"
 
 class Ball;
 class Player;
