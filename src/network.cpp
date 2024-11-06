@@ -7,8 +7,10 @@
 Network::Network(Game *game):
         channel(1),
         remoteTick(nullptr),
-        isNewTick(false) {
+        isNewTick(false),
+        remoteTickMutex(xSemaphoreCreateMutex()) {
     this->game = game;
+    xSemaphoreGive(remoteTickMutex);
 }
 
 void Network::init() {
@@ -91,6 +93,10 @@ uint8_t* Network::macFromString(String mac) {
     return macAddr;
 }
 
+SemaphoreHandle_t Network::getRemoteTickMutex() {
+    return remoteTickMutex;
+}
+
 void Network::addDiscoveredPeer(uint8_t* mac) {
     if (std::find(discoveredPeers.begin(), discoveredPeers.end(), mac) != discoveredPeers.end()) {
         return;
@@ -114,10 +120,8 @@ void Network::sendTick(RemoteTick* tick) {
     }
 
     esp_err_t result = esp_now_send(mac, (uint8_t*)tick, sizeof(RemoteTick));
-    if (result == ESP_OK) {
-        Serial.println("Tick sent");
-    } else {
-        Serial.printf("Failed to send tick: %d\n", result);
+    if (result != ESP_OK) {
+        Serial.printf("Failed to send remote tick: %d\n", result);
     }
 }
 
@@ -127,14 +131,16 @@ RemoteTick* Network::receiveTick() {
     }
 
     isNewTick = false;
-    return remoteTick;
+    return remoteTick.get();
 }
 
-void Network::setRemoteTick(RemoteTick *tick) {
-    if (remoteTick) {
-        delete remoteTick;
+void Network::setRemoteTick(std::unique_ptr<RemoteTick> tick) {
+    if (xSemaphoreTake(remoteTickMutex, portMAX_DELAY) != pdTRUE) {
+        Serial.println("Failed to take mutex");
+        return;
     }
-    remoteTick = tick;
+    remoteTick = std::move(tick);
+    xSemaphoreGive(remoteTickMutex);
     isNewTick = true;
 }
 
@@ -204,6 +210,13 @@ void Network::declineJoin() {
     } else {
         Serial.printf("Failed to decline join: %d\n", result);
     }
+}
+
+void Network::setMultiplayerHandlers() {
+    Serial.printf("Remote peer MAC: %s\n", stringFromMac(game->getPeer()).c_str());
+    Serial.printf("ESP-NOW is peer exist? %d\n", esp_now_is_peer_exist(game->getPeer()));
+    esp_now_register_recv_cb(Network::remoteTickCallback);
+    Serial.println("Multiplayer handlers set");
 }
 
 void Network::discoveryRequestCallback(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
@@ -316,8 +329,11 @@ void Network::remoteTickCallback(const uint8_t *mac_addr, const uint8_t *data, i
     }
 
     Network* network = game->getNetwork();
-    if (data_len == sizeof(RemoteTick)) {
-        RemoteTick* tick = (RemoteTick*)data;
-        network->setRemoteTick(tick);
+    if (data_len != sizeof(RemoteTick)) {
+        Serial.printf("Invalid tick size: %d\n", data_len);
     }
+
+    std::unique_ptr<RemoteTick> tick(new RemoteTick());
+    memcpy(tick.get(), data, sizeof(RemoteTick));
+    network->setRemoteTick(std::move(tick));
 }

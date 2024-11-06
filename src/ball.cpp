@@ -61,6 +61,22 @@ Side Ball::getDirection() {
   return Side::UP;
 }
 
+void Ball::setX(int x) {
+  this->x = x;
+}
+
+void Ball::setY(int y) {
+  this->y = y;
+}
+
+void Ball::setSpeedX(int xSpeed) {
+  this->xSpeed = xSpeed;
+}
+
+void Ball::setSpeedY(int ySpeed) {
+  this->ySpeed = ySpeed;
+}
+
 void Ball::setPosition(int x, int y) {
   this->x = x;
   this->y = y;

@@ -18,7 +18,7 @@ void Player::tick() {
 
 void Player::tick(RemoteTick* remoteTick) {
     Paddle* p = this->getPaddle();
-    p->setPos(remoteTick->playerPos);
+    p->setPos(WINDOW_WIDTH - remoteTick->playerPos);
 }
 
 void Player::render(bool force) {

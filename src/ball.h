@@ -17,6 +17,8 @@ public:
   Side getDirection();
   void setX(int x);
   void setY(int y);
+  void setSpeedX(int xSpeed);
+  void setSpeedY(int ySpeed);
   void setPosition(int x, int y);
   bool isInCenter(int threshold);
   void bounce(int angle);

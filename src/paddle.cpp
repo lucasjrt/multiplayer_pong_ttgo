@@ -1,16 +1,21 @@
 #include "paddle.h"
 
 void Paddle::render(bool force) {
-  int direction = player->getMovingDirection();
-  if (!direction && !force) return;
-
   Side side = player->getSide();
+
+  int direction = player->getMovingDirection();
+  if (!direction && !force && side == Side::DOWN) return;
+
   int speed = player->getSpeed();
   int y = 0;
-  if (side == Side::DOWN) y = WINDOW_HEIGHT - height;
+  if (side == Side::DOWN) {
+    y = WINDOW_HEIGHT - height;
+    if (direction > 0) Game::tft.fillRect(pos - width / 2 - speed * 2, y, speed * 2, height, BLACK);
+    else if (direction < 0) Game::tft.fillRect(pos + width / 2 + 1, y, speed * 2, height, BLACK);
+  } else {
+    Game::tft.fillRect(pos - width / 2 - speed * 2, y, width + speed * 4, height, BLACK);
+  }
   Game::tft.fillRect(pos - width / 2, y, width, height, WHITE);
-  if (direction > 0) Game::tft.fillRect(pos - width / 2 - speed * 2, y, speed * 2, height, BLACK);
-  else if (direction < 0) Game::tft.fillRect(pos + width / 2 + 1, y, speed * 2, height, BLACK);
 }
 
 void Paddle::centralize() {

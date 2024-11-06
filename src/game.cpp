@@ -1,6 +1,8 @@
 #include <WiFi.h>
 #include <esp_now.h>
 #include <esp_wifi.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
 #include "ball.h"
 #include "game.h"
@@ -14,12 +16,15 @@ TFT_eSPI Game::tft = TFT_eSPI();
 Game* Game::instance = nullptr;
 
 Game::Game():
+    tickCount(0),
     field(nullptr),
     ball(nullptr),
     menu(nullptr),
     uPlayer(nullptr),
     dPlayer(nullptr),
     isMultiplayer(false),
+    lastRemoteTick(0),
+    isHost(false),
     paused(false),
     lButton(nullptr),
     rButton(nullptr),
@@ -56,16 +61,23 @@ void Game::tick() {
   this->rButton->tick();
   if (paused) return;
   if (isMultiplayer) {
-    network->sendTick(getRemoteTick());
-    RemoteTick* remoteTick = network->receiveTick();
-    if (remoteTick == nullptr) {
-      Serial.println("Didn't receive a remote tick");
-      Game::tft.fillScreen(BLUE);
-      while (1) {}
-    } else {
-      Serial.println("Ticking remotely");
-      uPlayer->tick(remoteTick);
-      syncGame(remoteTick);
+    bool ticked = false;
+    SemaphoreHandle_t mutex = network->getRemoteTickMutex();
+    if (xSemaphoreTake(mutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+      RemoteTick* remoteTick = network->receiveTick();
+      if (remoteTick != nullptr) {
+        uPlayer->tick(remoteTick);
+        syncGame(remoteTick);
+        ticked = true;
+        if (remoteTick->scored) {
+          Serial.println("Remote should have scored");
+        }
+      }
+      if (!ticked) {
+        Serial.println("Failed to receive remote tick");
+        uPlayer->tick();
+      }
+      xSemaphoreGive(mutex);
     }
   }
   dPlayer->tick();
@@ -83,13 +95,17 @@ void Game::tick() {
     Serial.printf("Scored player: %d\n", scoredPlayer);
     score(scoredPlayer);
   }
+  tickCount++;
+  if (isMultiplayer) {
+    network->sendTick(getRemoteTick(scoredPlayer));
+  }
 }
 
 void Game::render() {
   if (paused) return;
   uPlayer->render();
   dPlayer->render();
-  if (ball->isInCenter(20)) {
+  if (ball->isInCenter(30)) {
     field->render();
     renderScore();
   }
@@ -191,7 +207,13 @@ bool Game::isPaused() {
   return paused;
 }
 
+bool Game::getIsHost() {
+  return isHost;
+}
+
 void Game::reset() {
+  Serial.println("Resetting game");
+  tickCount = 0;
   dPlayer->reset();
   uPlayer->reset();
   ball->recenter();
@@ -232,8 +254,11 @@ uint8_t* Game::getPeer() {
 
 void Game::initMultiplayer() {
   Serial.println("Initializing multiplayer");
+  network->setMultiplayerHandlers();
+  Serial.println("Multiplayer handlers set");
   isMultiplayer = true;
   reset();
+  Serial.println("Multiplayer initialized");
   menu->close();
   setPaused(false);
 }
@@ -242,8 +267,10 @@ void Game::cancelMultiplayer() {
   network->deinit();
 }
 
-RemoteTick* Game::getRemoteTick() {
+RemoteTick* Game::getRemoteTick(bool scoredPlayer) {
   RemoteTick* tick = new RemoteTick();
+  tick->tickCount = tickCount;
+  tick->scored = scoredPlayer;
   tick->playerPos = dPlayer->getPaddle()->getPos();
   tick->ballX = ball->getX();
   tick->ballY = ball->getY();
@@ -253,18 +280,39 @@ RemoteTick* Game::getRemoteTick() {
 }
 
 void Game::syncGame(RemoteTick* remoteTick) {
-  if (ball->getX() != remoteTick->ballX) {
-    Serial.printf("Ball X out of sync. Local: %d | Remote: %d", ball->getX(), remoteTick->ballX);
+  if (remoteTick->tickCount <= lastRemoteTick) {
+    Serial.printf("Delayed tick: %d\n", remoteTick->tickCount);
+    return;
+  } else  {
+    lastRemoteTick = remoteTick->tickCount;
   }
-  if (ball->getY() != remoteTick->ballY) {
-    Serial.printf("Ball Y out of sync. Local: %d | Remote: %d", ball->getY(), remoteTick->ballY);
+  if (remoteTick->tickCount != tickCount - 1) {
+    return;
   }
-  if (ball->getSpeedX() != remoteTick->ballSpeedX) {
-    Serial.printf("Ball speed X out of sync. Local: %d | Remote: %d", ball->getSpeedX(), remoteTick->ballSpeedX);
+  if (isHost) {
+    return;
   }
-  if (ball->getSpeedY() != remoteTick->ballSpeedY) {
-    Serial.printf("Ball speed Y out of sync. Local: %d | Remote: %d", ball->getSpeedY(), remoteTick->ballSpeedY);
+  int targetX = WINDOW_WIDTH - remoteTick->ballX;
+  int targetY = WINDOW_HEIGHT - remoteTick->ballY;
+  int targetSpeedX = -remoteTick->ballSpeedX;
+  int targetSpeedY = -remoteTick->ballSpeedY;
+  if (ball->getX() != targetX) {
+    Serial.printf("Ball X out of sync. Local: %d | Target: %d\n", ball->getX(), targetX);
+    ball->setX(targetX);
   }
+  if (ball->getY() != targetY) {
+    Serial.printf("Ball Y out of sync. Local: %d | Target: %d\n", ball->getY(), targetY);
+    ball->setY(targetY);
+  }
+  if (ball->getSpeedX() != targetSpeedX) {
+    Serial.printf("Ball Speed X out of sync. Local: %d | Target: %d\n", ball->getSpeedX(), targetSpeedX);
+    ball->setSpeedX(targetSpeedX);
+  }
+  if (ball->getSpeedY() != targetSpeedY) {
+    Serial.printf("Ball Speed Y out of sync. Local: %d | Target: %d\n", ball->getSpeedY(), targetSpeedY);
+    ball->setSpeedY(targetSpeedY);
+  }
+  initialRender();
 }
 
 void Field::render() {

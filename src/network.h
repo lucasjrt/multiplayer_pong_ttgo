@@ -1,6 +1,8 @@
 #pragma once
 
 #include <iostream>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 #include <string>
 #include <vector>
 #include "esp_now.h"
@@ -24,20 +26,23 @@ public:
     String getMacString();
     String stringFromMac(uint8_t* mac);
     uint8_t* macFromString(String mac);
+    SemaphoreHandle_t getRemoteTickMutex();
     void addDiscoveredPeer(uint8_t* mac);
     void setPeer(uint8_t* mac);
     void sendTick(RemoteTick* tick);
     RemoteTick* receiveTick();
-    void setRemoteTick(RemoteTick* tick);
+    void setRemoteTick(std::unique_ptr<RemoteTick> tick);
     void waitJoinResponse();
     void requestJoin(uint8_t* mac);
     void acceptJoin();
     void declineJoin();
+    void setMultiplayerHandlers();
 private:
     Game* game;
     uint8_t channel;
     std::vector<uint8_t*> discoveredPeers;
-    RemoteTick* remoteTick;
+    std::unique_ptr<RemoteTick> remoteTick;
+    SemaphoreHandle_t remoteTickMutex;
     bool isNewTick;
 
     static void discoveryRequestCallback(const uint8_t *mac_addr, const uint8_t *data, int data_len);

@@ -25,6 +25,8 @@ public:
 };
 
 typedef struct RemoteTick {
+  int tickCount;
+  bool scored;
   int playerPos;
   int ballX;
   int ballY;
@@ -55,6 +57,7 @@ public:
   void togglePause();
   void setPaused(bool paused);
   bool isPaused();
+  bool getIsHost();
   void reset();
   // Multiplayer
   void host();
@@ -65,13 +68,14 @@ public:
   uint8_t* getPeer();
   void initMultiplayer();
   void cancelMultiplayer();
-  RemoteTick* getRemoteTick();
+  RemoteTick* getRemoteTick(bool scored);
   void syncGame(RemoteTick* remoteTick);
-  void requestSent();
 private:
-
+  int tickCount;
   bool paused;
   bool isMultiplayer;
+  int lastRemoteTick;
+  bool isHost;
   Network* network;
   Menu* menu;
   Ball* ball;
